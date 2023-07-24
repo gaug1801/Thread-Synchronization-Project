@@ -72,7 +72,7 @@ void arrive(int vehicle_id, int vehicle_type, int vehicle_direction) {
 
 
 void cross(int vehicle_id, int vehicle_type, int vehicle_direction) {
-    sleep(3); // Simulate crossing the bridge for 3 seconds
+    sleep(3);
 }
 
 void leave(int vehicle_id, int vehicle_type, int vehicle_direction) {
@@ -92,8 +92,8 @@ void leave(int vehicle_id, int vehicle_type, int vehicle_direction) {
             northbound_lane_open = 0;
         }
         pthread_cond_signal(&northbound_queue_cond); // Signal vehicles waiting in the northbound queue
-        if (southbound_lane_open == 1) {
-            pthread_cond_signal(&southbound_queue_cond); // Signal vehicles waiting in the southbound queue
+        if (southbound_queue_count > 0) {
+            turn = 1; //Fairness system. It's now the southbound's turn
         }
     } else { // Southbound
         printf("Car #%d exited the bridge.\n", vehicle_id);
@@ -109,9 +109,15 @@ void leave(int vehicle_id, int vehicle_type, int vehicle_direction) {
             southbound_lane_open = 0;
         }
         pthread_cond_signal(&southbound_queue_cond); // Signal vehicles waiting in the southbound queue
-        if (northbound_lane_open == 1) {
-            pthread_cond_signal(&northbound_queue_cond); // Signal vehicles waiting in the northbound queue
+        if (northbound_queue_count > 0) { // If there are cars waiting northbound
+            turn = 0; // It's now the northbound's turn
         }
+    }
+    
+    if (turn == 0 && northbound_queue_count > 0) {
+        pthread_cond_signal(&northbound_queue_cond);
+    } else if (turn == 1 && southbound_queue_count > 0) {
+        pthread_cond_signal(&southbound_queue_cond);
     }
 
     pthread_mutex_unlock(&bridge_mutex);
@@ -121,7 +127,7 @@ void leave(int vehicle_id, int vehicle_type, int vehicle_direction) {
 void *vehicle_routine(void *arg) {
     int vehicle_id = *(int *)arg;
     int vehicle_type = rand() % 2; // 0: Car, 1: Van
-    int vehicle_direction = rand() % 2; // 0: Northbound, 1: Southbound. FIX: Use the probability given in the prompts. Consider struct implementation of Car
+    int vehicle_direction = rand() % 2; // 0: Northbound, 1: Southbound
 
     arrive(vehicle_id, vehicle_type, vehicle_direction);
     cross(vehicle_id, vehicle_type, vehicle_direction);
