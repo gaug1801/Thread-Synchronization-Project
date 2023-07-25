@@ -27,7 +27,7 @@ int turn = 0;
 void arrive(int vehicle_id, int vehicle_type, int vehicle_direction) {
     pthread_mutex_lock(&bridge_mutex);
 
-    if (vehicle_direction == 0) { // Northbound
+    if (vehicle_direction == 0) { //Northbound
         printf("Car #%d (northbound) arrived.\n", vehicle_id);
         if (vehicle_type == 0) {
             bridge_weight += 200;
@@ -126,8 +126,8 @@ void leave(int vehicle_id, int vehicle_type, int vehicle_direction) {
 
 void *vehicle_routine(void *arg) {
     int vehicle_id = *(int *)arg;
-    int vehicle_type = rand() % 2; // 0: Car, 1: Van
-    int vehicle_direction = rand() % 2; // 0: Northbound, 1: Southbound
+    int vehicle_type = rand() % 2; //0: Car, 1: Van
+    int vehicle_direction = rand() % 2; //0: Northbound, 1: Southbound
 
     arrive(vehicle_id, vehicle_type, vehicle_direction);
     cross(vehicle_id, vehicle_type, vehicle_direction);
@@ -143,21 +143,21 @@ int main() {
 
     pthread_t *threads;
 
-    // Initialize synchronization primitives
+    //Initialize synchronization primitives
     pthread_mutex_init(&bridge_mutex, NULL);
     pthread_cond_init(&northbound_lane_cond, NULL);
     pthread_cond_init(&southbound_lane_cond, NULL);
     pthread_cond_init(&northbound_queue_cond, NULL);
     pthread_cond_init(&southbound_queue_cond, NULL);
 
-    // Prompt for number of groups in the schedule
+    //Prompt for number of groups in the schedule
     printf("Enter the number of groups in the schedule: ");
     scanf("%d", &num_groups);
 
     threads = malloc(sizeof(pthread_t) * MAX_VEHICLES);
 
     for (i = 0; i < num_groups; i++) {
-        // Prompt for group information
+        //Prompt for group information
         printf("Group %d\n", i + 1);
         printf("Enter the number of vehicles: ");
         scanf("%d", &num_vehicles);
@@ -182,7 +182,7 @@ int main() {
         pthread_join(threads[i], NULL);
     }
 
-    // Clean up synchronization primitives
+    //Clean up synchronization primitives
     pthread_mutex_destroy(&bridge_mutex);
     pthread_cond_destroy(&northbound_lane_cond);
     pthread_cond_destroy(&southbound_lane_cond);
@@ -190,7 +190,6 @@ int main() {
     pthread_cond_destroy(&southbound_queue_cond);
 
     free(threads);
-    printf("Done.");
 
     return 0;
 }
