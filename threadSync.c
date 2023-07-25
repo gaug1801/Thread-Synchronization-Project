@@ -28,41 +28,55 @@ void arrive(int vehicle_id, int vehicle_type, int vehicle_direction) {
     pthread_mutex_lock(&bridge_mutex);
 
     if (vehicle_direction == 0) { //Northbound
-        printf("Car #%d (northbound) arrived.\n", vehicle_id);
         if (vehicle_type == 0) {
+            printf("Car #%d (northbound) arrived.\n", vehicle_id);
             bridge_weight += 200;
         } else {
+            printf("Van #%d (northbound) arrived.\n", vehicle_id);
             bridge_weight += 300;
         }
 
         if (southbound_lane_open == 0 && bridge_weight <= 1200) {
             northbound_lane_open = 1;
-            printf("Car #%d is now crossing the bridge.\n", vehicle_id);
+            
+            if (vehicle_type == 0) { printf("Car #%d is now crossing the bridge.\n", vehicle_id); }
+            else { printf("Van #%d is now crossing the bridge.\n", vehicle_id); }
+            
             pthread_cond_signal(&northbound_lane_cond);
         } else {
             northbound_queue_count++;
             pthread_cond_wait(&northbound_queue_cond, &bridge_mutex);
             northbound_lane_open = 1;
-            printf("Car #%d is now crossing the bridge.\n", vehicle_id);
+            
+            if (vehicle_type == 0){ printf("Car #%d is now crossing the bridge.\n", vehicle_id); }
+            else { printf("Van #%d is now crossing the bridge.\n", vehicle_id); }
+            
             pthread_cond_signal(&northbound_lane_cond);
         }
     } else { // Southbound
-        printf("Car #%d (southbound) arrived.\n", vehicle_id);
         if (vehicle_type == 0) {
+            printf("Car #%d (southbound) arrived.\n", vehicle_id);
             bridge_weight += 200;
         } else {
+            printf("Van #%d (southbound) arrived.\n", vehicle_id);
             bridge_weight += 300;
         }
 
         if (northbound_lane_open == 0 && bridge_weight <= 1200) {
             southbound_lane_open = 1;
-            printf("Car #%d is now crossing the bridge.\n", vehicle_id);
+            
+            if (vehicle_type == 0){ printf("Car #%d is now crossing the bridge.\n", vehicle_id); }
+            else { printf("Van #%d is now crossing the bridge.\n", vehicle_id); }
+            
             pthread_cond_signal(&southbound_lane_cond);
         } else {
             southbound_queue_count++;
             pthread_cond_wait(&southbound_queue_cond, &bridge_mutex);
             southbound_lane_open = 1;
-            printf("Car #%d is now crossing the bridge.\n", vehicle_id);
+            
+            if (vehicle_type == 0){ printf("Car #%d is now crossing the bridge.\n", vehicle_id); }
+            else { printf("Van #%d is now crossing the bridge.\n", vehicle_id); }
+            
             pthread_cond_signal(&southbound_lane_cond);
         }
     }
@@ -79,10 +93,11 @@ void leave(int vehicle_id, int vehicle_type, int vehicle_direction) {
     pthread_mutex_lock(&bridge_mutex);
 
     if (vehicle_direction == 0) { // Northbound
-        printf("Car #%d exited the bridge.\n", vehicle_id);
         if (vehicle_type == 0) {
+            printf("Car #%d exited the bridge.\n", vehicle_id);
             bridge_weight -= 200;
         } else {
+            printf("Van #%d exited the bridge.\n", vehicle_id);
             bridge_weight -= 300;
         }
 
@@ -96,10 +111,11 @@ void leave(int vehicle_id, int vehicle_type, int vehicle_direction) {
             turn = 1; //Fairness system. It's now the southbound's turn
         }
     } else { // Southbound
-        printf("Car #%d exited the bridge.\n", vehicle_id);
         if (vehicle_type == 0) {
+            printf("Car #%d exited the bridge.\n", vehicle_id);
             bridge_weight -= 200;
         } else {
+            printf("Van #%d exited the bridge.\n", vehicle_id);
             bridge_weight -= 300;
         }
 
@@ -136,37 +152,46 @@ void *vehicle_routine(void *arg) {
     pthread_exit(NULL);
 }
 
-int main() {
-    int num_groups, i, j, num_vehicles, delay;
+int main(int argc, char *argv[]) {
+    int num_groups, i, j, num_vehicles, delay, vehicle_id = 1;
     double northbound_prob, southbound_prob;
-    int vehicle_id = 1;
-
     pthread_t *threads;
 
-    //Initialize synchronization primitives
     pthread_mutex_init(&bridge_mutex, NULL);
     pthread_cond_init(&northbound_lane_cond, NULL);
     pthread_cond_init(&southbound_lane_cond, NULL);
     pthread_cond_init(&northbound_queue_cond, NULL);
     pthread_cond_init(&southbound_queue_cond, NULL);
 
-    //Prompt for number of groups in the schedule
-    printf("Enter the number of groups in the schedule: ");
-    scanf("%d", &num_groups);
-
     threads = malloc(sizeof(pthread_t) * MAX_VEHICLES);
 
+    FILE *file;
+    if (argc > 1) { // Command line argument provided, read from file
+        file = fopen(argv[1], "r");
+        if (!file) {
+            printf("Could not open file %s\n", argv[1]);
+            return 1;
+        }
+        fscanf(file, "%d", &num_groups);
+    } else { // No argument provided, read from stdin
+        printf("Enter the number of groups in the schedule: ");
+        scanf("%d", &num_groups);
+    }
+
     for (i = 0; i < num_groups; i++) {
-        //Prompt for group information
-        printf("Group %d\n", i + 1);
-        printf("Enter the number of vehicles: ");
-        scanf("%d", &num_vehicles);
-        printf("Enter the Northbound probability: ");
-        scanf("%lf", &northbound_prob);
-        printf("Enter the Southbound probability: ");
-        scanf("%lf", &southbound_prob);
-        printf("Enter the delay before the next group: ");
-        scanf("%d", &delay);
+        if (argc > 1) {
+            fscanf(file, "%d%lf%lf%d", &num_vehicles, &northbound_prob, &southbound_prob, &delay);
+        } else {
+            printf("Group %d\n", i + 1);
+            printf("Enter the number of vehicles: ");
+            scanf("%d", &num_vehicles);
+            printf("Enter the Northbound probability: ");
+            scanf("%lf", &northbound_prob);
+            printf("Enter the Southbound probability: ");
+            scanf("%lf", &southbound_prob);
+            printf("Enter the delay before the next group: ");
+            scanf("%d", &delay);
+        }
 
         for (j = 0; j < num_vehicles; j++) {
             int *vehicle_id_ptr = malloc(sizeof(int));
@@ -182,14 +207,18 @@ int main() {
         pthread_join(threads[i], NULL);
     }
 
-    //Clean up synchronization primitives
     pthread_mutex_destroy(&bridge_mutex);
     pthread_cond_destroy(&northbound_lane_cond);
     pthread_cond_destroy(&southbound_lane_cond);
     pthread_cond_destroy(&northbound_queue_cond);
     pthread_cond_destroy(&southbound_queue_cond);
 
+    if (argc > 1) {
+        fclose(file);
+    }
+
     free(threads);
 
     return 0;
 }
+
